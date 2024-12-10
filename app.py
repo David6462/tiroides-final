@@ -16,6 +16,19 @@ st.set_page_config(
     layout="wide"
 )
 
+# Aplicar tema oscuro personalizado
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0E1117;
+        color: white;
+    }
+    .stPlotlyChart {
+        background-color: #0E1117;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Configuración de estilo
 plt.style.use('classic')
 sns.set_palette("husl")
@@ -44,77 +57,13 @@ uploaded_file = st.sidebar.file_uploader("Cargar archivo CSV", type=['csv'])
 if uploaded_file is not None:
     df = cargar_datos(uploaded_file)
     
-    # Tabs para diferentes análisis
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📈 Pronósticos",
-        "👥 Demografía",
+        "📈 Pronósticos", 
+        "👥 Demografía", 
         "🗺️ Análisis Regional",
         "📊 Visualizaciones",
         "🔮 Predicción Individual"
     ])
-    
-    with tab1:
-        st.header("Análisis de Pronósticos")
-        
-        # Análisis con Prophet
-        df_prophet = df.groupby('ano')['tasa_mortalidad'].mean().reset_index()
-        df_prophet.columns = ['ds', 'y']
-        df_prophet['ds'] = pd.to_datetime(df_prophet['ds'], format='%Y')
-        
-        model = Prophet(
-            yearly_seasonality=True,
-            weekly_seasonality=False,
-            daily_seasonality=False
-        )
-        
-        with st.spinner('Calculando pronósticos...'):
-            model.fit(df_prophet)
-            future_dates = model.make_future_dataframe(periods=5, freq='Y')
-            forecast = model.predict(future_dates)
-            
-            # Gráfico de pronóstico con Plotly
-            fig_forecast = go.Figure()
-            
-            # Datos históricos
-            fig_forecast.add_trace(go.Scatter(
-                x=df_prophet['ds'],
-                y=df_prophet['y'],
-                name='Datos históricos',
-                mode='markers+lines',
-                line=dict(color='blue')
-            ))
-            
-            # Línea de pronóstico
-            fig_forecast.add_trace(go.Scatter(
-                x=forecast['ds'],
-                y=forecast['yhat'],
-                name='Pronóstico',
-                mode='lines',
-                line=dict(color='red', dash='dash')
-            ))
-            
-            # Intervalo de confianza
-            fig_forecast.add_trace(go.Scatter(
-                x=forecast['ds'].tolist() + forecast['ds'].tolist()[::-1],
-                y=forecast['yhat_upper'].tolist() + forecast['yhat_lower'].tolist()[::-1],
-                fill='toself',
-                fillcolor='rgba(0,100,255,0.2)',
-                line=dict(color='rgba(255,255,255,0)'),
-                name='Intervalo de confianza 95%'
-            ))
-            
-            fig_forecast.update_layout(
-                title='Pronóstico de Mortalidad por Tiroides',
-                xaxis_title='Año',
-                yaxis_title='Tasa de Mortalidad (por 100,000 habitantes)',
-                showlegend=True
-            )
-            
-            st.plotly_chart(fig_forecast)
-            
-            # Componentes de Prophet
-            fig_components = model.plot_components(forecast)
-            st.pyplot(fig_components)
     
     with tab2:
         st.header("Análisis Demográfico")
@@ -122,69 +71,68 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            # Gráfico de distribución por sexo con Plotly
+            # Gráfico de distribución por sexo mejorado
             sex_counts = df['sexo'].value_counts()
             fig_sex = go.Figure(data=[go.Pie(
                 labels=sex_counts.index,
                 values=sex_counts.values,
-                hole=0.3
+                hole=0.4,
+                marker_colors=['lightblue', '#1f77b4'],
+                textinfo='percent',
+                textfont_size=14,
+                showlegend=True
             )])
-            fig_sex.update_layout(title='Distribución por Sexo')
+            
+            fig_sex.update_layout(
+                title='Distribución por Sexo',
+                paper_bgcolor='#0E1117',
+                plot_bgcolor='#0E1117',
+                font=dict(color='white'),
+                showlegend=True,
+                legend=dict(
+                    yanchor="top",
+                    y=1.1,
+                    xanchor="left",
+                    x=0.01,
+                    orientation="h",
+                    font=dict(size=12),
+                    bgcolor='rgba(0,0,0,0)'
+                )
+            )
             st.plotly_chart(fig_sex)
         
         with col2:
-            # Distribución por edad con Plotly
-            age_counts = df.groupby('gru_edad')['n'].sum()
+            # Evolución temporal por grupo de edad mejorada
             fig_age = px.bar(
-                x=age_counts.index,
-                y=age_counts.values,
-                title='Distribución por Grupo de Edad'
+                df.groupby('gru_edad')['n'].sum().reset_index(),
+                x='gru_edad',
+                y='n',
+                title='Distribución por Grupo de Edad',
+                color_discrete_sequence=['lightblue']
             )
+            
             fig_age.update_layout(
-                xaxis_title='Grupo de Edad',
-                yaxis_title='Número de Casos'
+                paper_bgcolor='#0E1117',
+                plot_bgcolor='#0E1117',
+                font=dict(color='white'),
+                xaxis=dict(
+                    title='Grupo de Edad',
+                    gridcolor='rgba(255,255,255,0.1)',
+                    showgrid=True
+                ),
+                yaxis=dict(
+                    title='Número de Casos',
+                    gridcolor='rgba(255,255,255,0.1)',
+                    showgrid=True
+                ),
+                showlegend=False
             )
             st.plotly_chart(fig_age)
-        
-        # Distribución por edad y sexo
-        categorias_sexo = df['sexo'].unique()
-        st.write("Categorías de sexo encontradas:", categorias_sexo)
-        
-        # Distribución por edad y sexo con manejo de diferentes etiquetas
-        pivot_edad_sexo = df.pivot_table(
-            values='n',
-            index='gru_edad',
-            columns='sexo',
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # Crear el gráfico usando las categorías reales
-        fig_edad_sexo = go.Figure()
-        
-        # Agregar una barra para cada categoría de sexo
-        for categoria in categorias_sexo:
-            if categoria in pivot_edad_sexo.columns:
-                fig_edad_sexo.add_trace(
-                    go.Bar(
-                        name=f'Sexo {categoria}',
-                        x=pivot_edad_sexo.index,
-                        y=pivot_edad_sexo[categoria]
-                    )
-                )
-        
-        fig_edad_sexo.update_layout(
-            barmode='stack',
-            title='Distribución de Mortalidad por Grupo de Edad y Sexo',
-            xaxis_title='Grupo de Edad',
-            yaxis_title='Número de Casos',
-            showlegend=True
-        )
-        st.plotly_chart(fig_edad_sexo)
     
     with tab3:
         st.header("Análisis Regional")
         
-        # Heatmap de tasas de mortalidad
+        # Heatmap mejorado
         anos_max = df['ano'].max()
         df_reciente = df[df['ano'] > anos_max - 10]
         
@@ -195,58 +143,108 @@ if uploaded_file is not None:
             aggfunc='mean'
         )
         
-        fig_heatmap = px.imshow(
-            pivot_table,
-            aspect='auto',
-            color_continuous_scale='Reds',
-            title='Tasas de Mortalidad por Departamento (últimos 10 años)'
-        )
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=pivot_table.values,
+            x=pivot_table.columns,
+            y=pivot_table.index,
+            colorscale='Reds',
+            showscale=True
+        ))
+        
         fig_heatmap.update_layout(
-            xaxis_title='Año',
-            yaxis_title='Departamento'
+            title='Tasas de Mortalidad por Departamento',
+            paper_bgcolor='#0E1117',
+            plot_bgcolor='#0E1117',
+            font=dict(color='white'),
+            xaxis=dict(title='Año'),
+            yaxis=dict(title='Departamento'),
+            height=600
         )
         st.plotly_chart(fig_heatmap)
         
-        # Análisis por departamento
+        # Gráfico de dispersión mejorado
         dept_stats = df.groupby('dpto').agg({
             'tasa_mortalidad': 'mean',
             'total': 'mean',
             'n': 'sum'
         }).reset_index()
         
-        fig_bubble = px.scatter(
+        fig_scatter = px.scatter(
             dept_stats,
             x='tasa_mortalidad',
             y='total',
             size='n',
             color='tasa_mortalidad',
             hover_name='dpto',
-            title='Análisis de Mortalidad y Población por Departamento',
             color_continuous_scale='Viridis'
         )
-        st.plotly_chart(fig_bubble)
+        
+        fig_scatter.update_layout(
+            title='Análisis de Mortalidad y Población por Departamento',
+            paper_bgcolor='#0E1117',
+            plot_bgcolor='#0E1117',
+            font=dict(color='white'),
+            xaxis=dict(
+                title='Tasa de Mortalidad',
+                gridcolor='rgba(255,255,255,0.1)',
+                showgrid=True
+            ),
+            yaxis=dict(
+                title='Población Total',
+                gridcolor='rgba(255,255,255,0.1)',
+                showgrid=True
+            )
+        )
+        st.plotly_chart(fig_scatter)
     
     with tab4:
         st.header("Visualizaciones Detalladas")
         
-        # Matriz de correlación
+        # Matriz de correlación mejorada
         columnas_numericas = ['ano', 'n', 'total', 'tasa_mortalidad']
         corr_matrix = df[columnas_numericas].corr()
         
-        fig_corr = px.imshow(
-            corr_matrix,
-            color_continuous_scale='RdBu',
-            aspect='auto',
-            title='Matriz de Correlación'
+        fig_corr = go.Figure(data=go.Heatmap(
+            z=corr_matrix.values,
+            x=corr_matrix.columns,
+            y=corr_matrix.columns,
+            colorscale='RdBu',
+            zmid=0
+        ))
+        
+        fig_corr.update_layout(
+            title='Matriz de Correlación',
+            paper_bgcolor='#0E1117',
+            plot_bgcolor='#0E1117',
+            font=dict(color='white')
         )
         st.plotly_chart(fig_corr)
         
-        # Evolución temporal
-        fig_evolution = px.line(
-            df.groupby('ano')['tasa_mortalidad'].mean().reset_index(),
-            x='ano',
-            y='tasa_mortalidad',
-            title='Evolución Temporal de la Tasa de Mortalidad'
+        # Evolución temporal mejorada
+        fig_evolution = go.Figure()
+        
+        fig_evolution.add_trace(go.Scatter(
+            x=df.groupby('ano')['tasa_mortalidad'].mean().index,
+            y=df.groupby('ano')['tasa_mortalidad'].mean().values,
+            mode='lines',
+            line=dict(color='#17becf', width=2)
+        ))
+        
+        fig_evolution.update_layout(
+            title='Evolución Temporal de la Tasa de Mortalidad',
+            paper_bgcolor='#0E1117',
+            plot_bgcolor='#0E1117',
+            font=dict(color='white'),
+            xaxis=dict(
+                title='Año',
+                gridcolor='rgba(255,255,255,0.1)',
+                showgrid=True
+            ),
+            yaxis=dict(
+                title='Tasa de Mortalidad',
+                gridcolor='rgba(255,255,255,0.1)',
+                showgrid=True
+            )
         )
         st.plotly_chart(fig_evolution)
             
