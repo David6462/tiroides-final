@@ -357,17 +357,27 @@ if uploaded_file is not None:
             col1, col2 = st.columns(2)
             
             with col1:
+                # Limpiar cualquier figura previa
+                plt.close('all')
+                
                 # Distribución por grupo de edad y sexo
-                fig1 = plt.figure(figsize=(12, 6))
-                df_edad_sexo = df.groupby(['gru_edad', 'sexo'])['n'].sum().unstack()
-                df_edad_sexo = df_edad_sexo.fillna(0)  # Manejar valores faltantes
-                df_edad_sexo.plot(kind='bar', stacked=True)
-                plt.title('Distribución de Mortalidad por Grupo de Edad y Sexo')
-                plt.xlabel('Grupo de Edad')
-                plt.ylabel('Número de Casos')
-                plt.legend(title='Sexo')
+                fig1, ax1 = plt.subplots(figsize=(12, 6))
+                
+                # Preparar los datos
+                df_edad_sexo = df.groupby(['gru_edad', 'sexo'])['n'].sum().reset_index()
+                df_pivot = df_edad_sexo.pivot(index='gru_edad', columns='sexo', values='n')
+                df_pivot = df_pivot.fillna(0)
+                
+                # Crear el gráfico
+                df_pivot.plot(kind='bar', stacked=True, ax=ax1)
+                ax1.set_title('Distribución de Mortalidad por Grupo de Edad y Sexo')
+                ax1.set_xlabel('Grupo de Edad')
+                ax1.set_ylabel('Número de Casos')
+                plt.legend(title='Sexo', bbox_to_anchor=(1.05, 1))
                 plt.xticks(rotation=45)
                 plt.tight_layout()
+                
+                # Mostrar el gráfico
                 st.pyplot(fig1)
             
             with col2:
@@ -474,17 +484,24 @@ if uploaded_file is not None:
             st.pyplot(fig)
             
         elif viz_type == "Evolución Temporal":
-            # Evolución de la mortalidad por grupo de edad
-            pivot_trend = df.groupby(['ano', 'gru_edad'])['n'].sum().unstack()
-            pivot_trend = pivot_trend.fillna(0)  # Manejar valores faltantes
+            # Limpiar cualquier figura previa
+            plt.close('all')
             
-            fig = plt.figure(figsize=(12, 6))
-            pivot_trend.plot(kind='area', stacked=True)
+            # Crear nueva figura
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Preparar los datos
+            pivot_trend = df.groupby(['ano', 'gru_edad'])['n'].sum().unstack(fill_value=0)
+            
+            # Crear el gráfico
+            pivot_trend.plot(kind='area', stacked=True, ax=ax)
             plt.title('Evolución de la Mortalidad por Grupo de Edad')
             plt.xlabel('Año')
             plt.ylabel('Número de Casos')
             plt.legend(title='Grupo de Edad', bbox_to_anchor=(1.05, 1))
             plt.tight_layout()
+            
+            # Mostrar el gráfico
             st.pyplot(fig)
             
         else:  # Correlaciones
