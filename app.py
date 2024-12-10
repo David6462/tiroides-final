@@ -44,13 +44,12 @@ if uploaded_file is not None:
     df = cargar_datos(uploaded_file)
     
     # Tabs para diferentes análisis
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📈 Pronósticos", 
         "👥 Demografía", 
         "🗺️ Análisis Regional", 
         "📊 Visualizaciones Detalladas",
-        "🔮 Predicción Individual",
-        "📑 Análisis Adicional"
+        "🔮 Predicción Individual"
     ])
     
     with tab1:
@@ -173,21 +172,6 @@ if uploaded_file is not None:
             plt.ylabel('Número de Casos')
             plt.xticks(rotation=45)
             st.pyplot(fig_age)
-        
-        # Distribución de Mortalidad por Grupo de Edad y Sexo
-        st.subheader("Distribución de Mortalidad por Grupo de Edad y Sexo")
-        fig_edad_sexo = plt.figure(figsize=(12, 6))
-        # Asegurarse de que los datos estén ordenados
-        df_edad_sexo = df.groupby(['gru_edad', 'sexo'])['n'].sum().unstack()
-        df_edad_sexo = df_edad_sexo.fillna(0)  # Manejar valores faltantes
-        df_edad_sexo.plot(kind='bar', stacked=True)
-        plt.title('Distribución de Mortalidad por Grupo de Edad y Sexo')
-        plt.xlabel('Grupo de Edad')
-        plt.ylabel('Número de Casos')
-        plt.legend(title='Sexo')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        st.pyplot(fig_edad_sexo)
         
         # Tasas de mortalidad por grupo de edad
         st.subheader("Tasas de Mortalidad por Grupo de Edad")
