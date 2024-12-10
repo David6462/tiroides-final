@@ -177,13 +177,10 @@ if uploaded_file is not None:
         # Distribución de Mortalidad por Grupo de Edad y Sexo
         st.subheader("Distribución de Mortalidad por Grupo de Edad y Sexo")
         fig_edad_sexo = plt.figure(figsize=(12, 6))
-        pivot_edad_sexo = df.pivot_table(
-            values='n',
-            index='gru_edad',
-            columns='sexo',
-            aggfunc='sum'
-        )
-        pivot_edad_sexo.plot(kind='bar', stacked=True)
+        # Asegurarse de que los datos estén ordenados
+        df_edad_sexo = df.groupby(['gru_edad', 'sexo'])['n'].sum().unstack()
+        df_edad_sexo = df_edad_sexo.fillna(0)  # Manejar valores faltantes
+        df_edad_sexo.plot(kind='bar', stacked=True)
         plt.title('Distribución de Mortalidad por Grupo de Edad y Sexo')
         plt.xlabel('Grupo de Edad')
         plt.ylabel('Número de Casos')
@@ -362,13 +359,9 @@ if uploaded_file is not None:
             with col1:
                 # Distribución por grupo de edad y sexo
                 fig1 = plt.figure(figsize=(12, 6))
-                pivot_edad_sexo = df.pivot_table(
-                    values='n',
-                    index='gru_edad',
-                    columns='sexo',
-                    aggfunc='sum'
-                )
-                pivot_edad_sexo.plot(kind='bar', stacked=True)
+                df_edad_sexo = df.groupby(['gru_edad', 'sexo'])['n'].sum().unstack()
+                df_edad_sexo = df_edad_sexo.fillna(0)  # Manejar valores faltantes
+                df_edad_sexo.plot(kind='bar', stacked=True)
                 plt.title('Distribución de Mortalidad por Grupo de Edad y Sexo')
                 plt.xlabel('Grupo de Edad')
                 plt.ylabel('Número de Casos')
@@ -482,12 +475,8 @@ if uploaded_file is not None:
             
         elif viz_type == "Evolución Temporal":
             # Evolución de la mortalidad por grupo de edad
-            pivot_trend = df.pivot_table(
-                values='n',
-                index='ano',
-                columns='gru_edad',
-                aggfunc='sum'
-            )
+            pivot_trend = df.groupby(['ano', 'gru_edad'])['n'].sum().unstack()
+            pivot_trend = pivot_trend.fillna(0)  # Manejar valores faltantes
             
             fig = plt.figure(figsize=(12, 6))
             pivot_trend.plot(kind='area', stacked=True)
