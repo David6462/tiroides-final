@@ -147,6 +147,10 @@ if uploaded_file is not None:
             st.plotly_chart(fig_age)
         
         # Distribución por edad y sexo
+        categorias_sexo = df['sexo'].unique()
+        st.write("Categorías de sexo encontradas:", categorias_sexo)
+        
+        # Distribución por edad y sexo con manejo de diferentes etiquetas
         pivot_edad_sexo = df.pivot_table(
             values='n',
             index='gru_edad',
@@ -154,15 +158,26 @@ if uploaded_file is not None:
             aggfunc='sum'
         ).fillna(0)
         
-        fig_edad_sexo = go.Figure(data=[
-            go.Bar(name='Hombres', x=pivot_edad_sexo.index, y=pivot_edad_sexo['M']),
-            go.Bar(name='Mujeres', x=pivot_edad_sexo.index, y=pivot_edad_sexo['F'])
-        ])
+        # Crear el gráfico usando las categorías reales
+        fig_edad_sexo = go.Figure()
+        
+        # Agregar una barra para cada categoría de sexo
+        for categoria in categorias_sexo:
+            if categoria in pivot_edad_sexo.columns:
+                fig_edad_sexo.add_trace(
+                    go.Bar(
+                        name=f'Sexo {categoria}',
+                        x=pivot_edad_sexo.index,
+                        y=pivot_edad_sexo[categoria]
+                    )
+                )
+        
         fig_edad_sexo.update_layout(
             barmode='stack',
             title='Distribución de Mortalidad por Grupo de Edad y Sexo',
             xaxis_title='Grupo de Edad',
-            yaxis_title='Número de Casos'
+            yaxis_title='Número de Casos',
+            showlegend=True
         )
         st.plotly_chart(fig_edad_sexo)
     
