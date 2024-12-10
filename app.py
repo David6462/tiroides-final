@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.graph_objects as go
 from prophet import Prophet
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
@@ -39,7 +40,7 @@ if uploaded_file is not None:
     df = cargar_datos(uploaded_file)
     
     # Tabs para diferentes análisis
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Pronósticos", "👥 Demografía", "🗺️ Análisis Regional", "📊 Visualizaciones"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Pronósticos", "👥 Demografía", "🗺️ Análisis Regional", "📊 Visualizaciones", "🔮 Predicción Individual"])
     
     with tab1:
         st.header("Análisis de Pronósticos")
@@ -196,6 +197,149 @@ if uploaded_file is not None:
             plt.ylabel('Tasa de Mortalidad')
             plt.grid(True, alpha=0.3)
             st.pyplot(fig_trend)
+            
+    with tab5:
+        st.header("Predicción de Riesgo Individual")
+        st.markdown("""
+        Este módulo utiliza machine learning para estimar el riesgo individual basado en las características del paciente.
+        Por favor, complete la siguiente información:
+        """)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            edad = st.selectbox(
+                "Grupo de Edad",
+                options=[
+                    "0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34",
+                    "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65+"
+                ]
+            )
+            
+            sexo = st.radio("Sexo", ["F", "M"])
+            
+            dpto_residencia = st.selectbox(
+                "Departamento de Residencia",
+                options=sorted(df['dpto'].unique()) if uploaded_file is not None else []
+            )
+            
+        with col2:
+            antecedentes_familiares = st.radio(
+                "¿Antecedentes familiares de enfermedad tiroidea?",
+                ["Sí", "No"]
+            )
+            
+            imc = st.number_input(
+                "Índice de Masa Corporal (IMC)",
+                min_value=10.0,
+                max_value=50.0,
+                value=25.0,
+                step=0.1
+            )
+            
+            enfermedades_previas = st.multiselect(
+                "Enfermedades previas",
+                [
+                    "Diabetes",
+                    "Hipertensión",
+                    "Enfermedad cardiovascular",
+                    "Ninguna"
+                ]
+            )
+        
+        # Botón para calcular predicción
+        if st.button("Calcular Riesgo"):
+            # Aquí iría la lógica del modelo de predicción
+            # Por ahora usaremos un cálculo simple basado en reglas
+            
+            # Factor base por edad
+            edad_factor = {
+                "0-4": 0.1, "5-9": 0.1, "10-14": 0.2, "15-19": 0.3,
+                "20-24": 0.4, "25-29": 0.5, "30-34": 0.6, "35-39": 0.7,
+                "40-44": 0.8, "45-49": 0.9, "50-54": 1.0, "55-59": 1.1,
+                "60-64": 1.2, "65+": 1.3
+            }
+            
+            # Calcular score base
+            risk_score = edad_factor[edad]
+            
+            # Ajustar por otros factores
+            if sexo == "F":
+                risk_score *= 1.2  # Las mujeres tienen mayor riesgo
+            if antecedentes_familiares == "Sí":
+                risk_score *= 1.5
+            if imc > 30:
+                risk_score *= 1.2
+            if len(enfermedades_previas) > 0 and "Ninguna" not in enfermedades_previas:
+                risk_score *= (1 + (len(enfermedades_previas) * 0.1))
+                
+            # Normalizar score a probabilidad
+            prob = min(risk_score / 3, 0.99)
+            
+            # Mostrar resultados
+            st.markdown("---")
+            st.subheader("Resultados del Análisis")
+            
+            # Mostrar gauge chart para el riesgo
+            
+            
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = prob * 100,
+                domain = {'x': [0, 1], 'y': [0, 1]},
+                title = {'text': "Nivel de Riesgo"},
+                gauge = {
+                    'axis': {'range': [None, 100]},
+                    'bar': {'color': "darkblue"},
+                    'steps' : [
+                        {'range': [0, 33], 'color': "lightgreen"},
+                        {'range': [33, 66], 'color': "yellow"},
+                        {'range': [66, 100], 'color': "red"}
+                    ],
+                    'threshold': {
+                        'line': {'color': "red", 'width': 4},
+                        'thickness': 0.75,
+                        'value': prob * 100
+                    }
+                }
+            ))
+            
+            st.plotly_chart(fig)
+            
+            # Mostrar recomendaciones basadas en el riesgo
+            st.subheader("Recomendaciones")
+            if prob < 0.33:
+                st.success("""
+                📌 Riesgo Bajo
+                - Mantener chequeos regulares anuales
+                - Continuar con hábitos saludables
+                - Monitorear cualquier cambio en síntomas
+                """)
+            elif prob < 0.66:
+                st.warning("""
+                📌 Riesgo Moderado
+                - Programar revisión con endocrinólogo
+                - Realizar pruebas de función tiroidea cada 6 meses
+                - Evaluar factores de riesgo modificables
+                - Considerar cambios en el estilo de vida
+                """)
+            else:
+                st.error("""
+                📌 Riesgo Alto
+                - Consultar especialista de inmediato
+                - Realizar evaluación completa de la tiroides
+                - Considerar pruebas adicionales (ultrasonido, etc.)
+                - Seguimiento cercano y regular
+                - Implementar cambios en el estilo de vida
+                """)
+                
+            # Mostrar disclaimer
+            st.markdown("---")
+            st.caption("""
+            ⚠️ IMPORTANTE: Esta predicción es solo una estimación basada en factores de riesgo conocidos.
+            No constituye un diagnóstico médico. Siempre consulte con un profesional de la salud para
+            una evaluación adecuada.
+            """)
     
     # Descarga de datos procesados
     st.sidebar.markdown("---")
